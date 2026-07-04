@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>PRViewer.Core</RootNamespace>
+    <AssemblyName>PRViewer.Core</AssemblyName>
+    <Version>0.1.0</Version>
+    <Authors>Claudio (Patagonia Robot)</Authors>
+    <Company>Patagonia Robot</Company>
+    <Description>PR-Viewer — Núcleo de inspección forense de solo lectura (Capa 1). Nunca escribe, modifica ni reescribe el material que inspecciona.</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/PatagoniaRobot/PR-Viewer</RepositoryUrl>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

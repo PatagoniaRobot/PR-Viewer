@@ -1,0 +1,12 @@
+# Salidas de compilación .NET
+bin/
+obj/
+*.user
+
+# IDE
+.vs/
+.idea/
+*.suo
+
+# Resultados de pruebas
+TestResults/
