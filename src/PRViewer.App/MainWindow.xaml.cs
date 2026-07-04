@@ -22,6 +22,17 @@ public partial class MainWindow : Window
     private void OnTreeSelectionChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         => _viewModel.SelectedNode = e.NewValue as EntryNodeViewModel;
 
+    /// <summary>Abre el diálogo del informe y delega la generación en el view model.</summary>
+    private async void OnGenerateReport(object sender, RoutedEventArgs e)
+    {
+        var dialog = new ReportDialog { Owner = this };
+        if (dialog.ShowDialog() != true)
+            return;
+
+        await _viewModel.GenerateReportAsync(
+            dialog.CaseInfo, dialog.DestinationDirectory, dialog.GenerateHtml, dialog.GenerateTxt);
+    }
+
     protected override void OnClosing(CancelEventArgs e)
     {
         base.OnClosing(e);

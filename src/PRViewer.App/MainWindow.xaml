@@ -386,6 +386,9 @@
                             <TextBlock Text="Mostrar multimedia" />
                         </StackPanel>
                     </ToggleButton>
+                    <Button Content="📄  Informe…" Click="OnGenerateReport"
+                            IsEnabled="{Binding CanGenerateReport}" Margin="0,0,8,0"
+                            ToolTip="Genera el informe técnico de inspección (metadatos, estadísticas y hashes; nunca el contenido de los mensajes)." />
                     <Button Content="📦  Abrir paquete…" Command="{Binding OpenFileCommand}" Margin="0,0,8,0" />
                     <Button Content="📁  Abrir carpeta…" Command="{Binding OpenFolderCommand}" />
                 </StackPanel>

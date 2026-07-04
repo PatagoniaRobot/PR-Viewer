@@ -5,6 +5,7 @@ using PRViewer.App.Services;
 using PRViewer.App.ViewModels.Previews;
 using PRViewer.Core.Ingestion;
 using PRViewer.Core.Model;
+using PRViewer.Core.Reporting;
 using PRViewer.Core.Sources;
 
 namespace PRViewer.App.ViewModels;
@@ -68,6 +69,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     public bool HasConversation => _conversation is not null;
     public bool HasSource => _source is not null;
+    public bool CanGenerateReport => _conversation is not null && _source is not null;
 
     // Resumen de la conversación para la franja superior.
     public string PlatformText => _conversation?.Platform.ToString() ?? "—";
@@ -265,6 +267,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         RaisePropertyChanged(nameof(Attachments));
         RaisePropertyChanged(nameof(HasConversation));
         RaisePropertyChanged(nameof(HasSource));
+        RaisePropertyChanged(nameof(CanGenerateReport));
         RaisePropertyChanged(nameof(PlatformText));
         RaisePropertyChanged(nameof(ParticipantsText));
         RaisePropertyChanged(nameof(DateRangeText));
@@ -301,6 +304,75 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             FileKind.Docx => new DocxPreviewViewModel(_source, entry, knownSha256),
             _ => new FileInfoPreviewViewModel(_source, entry, knownSha256),
         };
+    }
+
+    /// <summary>
+    /// Genera el informe técnico de inspección vía Capa 1. Solo lectura sobre el
+    /// paquete: la única escritura es el informe, en el destino elegido por el perito.
+    /// </summary>
+    public async Task GenerateReportAsync(ReportCaseInfo? caseInfo, string destinationDirectory,
+        bool generateHtml, bool generateTxt)
+    {
+        if (_source is not { } source || _conversation is not { } conversation || _sourcePath is not { } path)
+        {
+            StatusText = "No hay una conversación reconocida para informar.";
+            return;
+        }
+
+        IsLoading = true;
+        StatusText = "Generando informe de inspección…";
+
+        try
+        {
+            var result = await Task.Run(() =>
+            {
+                // El hash del contenedor se calcula fresco acá (el de la barra de
+                // estado puede seguir computándose); las carpetas no tienen hash único.
+                string? packageSha256 = null;
+                long? sizeBytes = null;
+                DateTime? lastModifiedUtc = null;
+                if (File.Exists(path))
+                {
+                    using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    packageSha256 = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+                    var info = new FileInfo(path);
+                    sizeBytes = info.Length;
+                    lastModifiedUtc = info.LastWriteTimeUtc;
+                }
+
+                var kind = source switch
+                {
+                    ZipInspectionSource => PackageKind.Zip,
+                    FolderInspectionSource => PackageKind.Folder,
+                    _ => PackageKind.File,
+                };
+
+                return InspectionReportGenerator.Generate(new InspectionReportRequest
+                {
+                    Package = new PackageIdentity(
+                        source.DisplayName, path, kind, packageSha256, sizeBytes, lastModifiedUtc),
+                    Conversation = conversation,
+                    Source = source,
+                    DestinationDirectory = destinationDirectory,
+                    CaseInfo = caseInfo,
+                    GenerateHtml = generateHtml,
+                    GenerateTxt = generateTxt,
+                });
+            });
+
+            var generated = new[] { result.HtmlPath, result.TxtPath }
+                .Where(p => p is not null)
+                .Select(p => Path.GetFileName(p)!);
+            StatusText = $"✓ Informe generado en «{destinationDirectory}»: {string.Join(", ", generated)}. El paquete permanece intacto.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"✗ No se pudo generar el informe: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private async Task ComputePackageHashAsync(string path)
