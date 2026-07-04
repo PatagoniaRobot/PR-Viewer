@@ -386,6 +386,9 @@
                             <TextBlock Text="Mostrar multimedia" />
                         </StackPanel>
                     </ToggleButton>
+                    <Button Content="💾  Extraer…" Click="OnExtractSelected"
+                            IsEnabled="{Binding CanExtractSelected}" Margin="0,0,8,0"
+                            ToolTip="Extracción controlada de la entrada seleccionada: copia verificada por SHA-256 contra el paquete, con constancia automática. El material de origen no se toca." />
                     <Button Content="📄  Informe…" Click="OnGenerateReport"
                             IsEnabled="{Binding CanGenerateReport}" Margin="0,0,8,0"
                             ToolTip="Genera el informe técnico de inspección (metadatos, estadísticas y hashes; nunca el contenido de los mensajes)." />

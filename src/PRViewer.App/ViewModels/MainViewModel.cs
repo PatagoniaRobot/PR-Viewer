@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Microsoft.Win32;
 using PRViewer.App.Services;
 using PRViewer.App.ViewModels.Previews;
+using PRViewer.Core.Extraction;
 using PRViewer.Core.Ingestion;
 using PRViewer.Core.Model;
 using PRViewer.Core.Reporting;
@@ -25,6 +26,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private ChatPreviewViewModel? _chatPreview;
     private Dictionary<string, AttachmentInfo>? _attachmentsByName;
 
+    private SourceEntry? _extractableEntry;
     private string _statusText = "Abrí un paquete de exportación para inspeccionarlo. El material nunca se modifica.";
     private string? _sourcePath;
     private string _packageSha256 = "—";
@@ -70,6 +72,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public bool HasConversation => _conversation is not null;
     public bool HasSource => _source is not null;
     public bool CanGenerateReport => _conversation is not null && _source is not null;
+    public bool CanExtractSelected => _extractableEntry is not null && _source is not null;
+
+    /// <summary>Nombre de la entrada seleccionada para extraer (para la UI y la confirmación).</summary>
+    public string? ExtractableEntryName => _extractableEntry?.Name;
 
     // Resumen de la conversación para la franja superior.
     public string PlatformText => _conversation?.Platform.ToString() ?? "—";
@@ -99,7 +105,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         get => _selectedNode;
         set
         {
-            if (SetProperty(ref _selectedNode, value) && value?.Entry is { } entry)
+            if (!SetProperty(ref _selectedNode, value))
+                return;
+
+            SetExtractableEntry(value?.Entry);
+            if (value?.Entry is { } entry)
                 SelectedPreview = CreatePreview(entry);
         }
     }
@@ -112,6 +122,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             if (SetProperty(ref _selectedAttachment, value) && value is not null)
             {
+                SetExtractableEntry(value.Entry);
                 SelectedPreview = value.Entry is { } entry
                     ? CreatePreview(entry)
                     : new MissingAttachmentPreviewViewModel(value.Attachment);
@@ -209,11 +220,19 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private void SetExtractableEntry(SourceEntry? entry)
+    {
+        _extractableEntry = entry;
+        RaisePropertyChanged(nameof(CanExtractSelected));
+        RaisePropertyChanged(nameof(ExtractableEntryName));
+    }
+
     private void ResetState()
     {
         SelectedPreview = null;
         _selectedNode = null;
         _selectedAttachment = null;
+        _extractableEntry = null;
         _chatPreview = null;
         _chatEntry = null;
         _attachmentsByName = null;
@@ -268,6 +287,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         RaisePropertyChanged(nameof(HasConversation));
         RaisePropertyChanged(nameof(HasSource));
         RaisePropertyChanged(nameof(CanGenerateReport));
+        RaisePropertyChanged(nameof(CanExtractSelected));
+        RaisePropertyChanged(nameof(ExtractableEntryName));
         RaisePropertyChanged(nameof(PlatformText));
         RaisePropertyChanged(nameof(ParticipantsText));
         RaisePropertyChanged(nameof(DateRangeText));
@@ -325,40 +346,16 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         try
         {
             var result = await Task.Run(() =>
-            {
-                // El hash del contenedor se calcula fresco acá (el de la barra de
-                // estado puede seguir computándose); las carpetas no tienen hash único.
-                string? packageSha256 = null;
-                long? sizeBytes = null;
-                DateTime? lastModifiedUtc = null;
-                if (File.Exists(path))
+                InspectionReportGenerator.Generate(new InspectionReportRequest
                 {
-                    using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-                    packageSha256 = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
-                    var info = new FileInfo(path);
-                    sizeBytes = info.Length;
-                    lastModifiedUtc = info.LastWriteTimeUtc;
-                }
-
-                var kind = source switch
-                {
-                    ZipInspectionSource => PackageKind.Zip,
-                    FolderInspectionSource => PackageKind.Folder,
-                    _ => PackageKind.File,
-                };
-
-                return InspectionReportGenerator.Generate(new InspectionReportRequest
-                {
-                    Package = new PackageIdentity(
-                        source.DisplayName, path, kind, packageSha256, sizeBytes, lastModifiedUtc),
+                    Package = BuildPackageIdentity(source, path),
                     Conversation = conversation,
                     Source = source,
                     DestinationDirectory = destinationDirectory,
                     CaseInfo = caseInfo,
                     GenerateHtml = generateHtml,
                     GenerateTxt = generateTxt,
-                });
-            });
+                }));
 
             var generated = new[] { result.HtmlPath, result.TxtPath }
                 .Where(p => p is not null)
@@ -373,6 +370,89 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             IsLoading = false;
         }
+    }
+
+    /// <summary>
+    /// Extrae la entrada seleccionada como operación controlada (Enmienda E1.3.b):
+    /// copia verificada por SHA-256 contra el paquete y constancia automática.
+    /// </summary>
+    public async Task ExtractSelectedEntryAsync(string destinationDirectory)
+    {
+        if (_source is not { } source || _extractableEntry is not { } entry || _sourcePath is not { } path)
+        {
+            StatusText = "No hay una entrada seleccionada para extraer.";
+            return;
+        }
+
+        // Hashes que la ingesta ya observó, para la doble verificación.
+        Dictionary<string, string>? knownHashes = null;
+        if (_attachmentsByName is { } map)
+        {
+            knownHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (name, attachment) in map)
+            {
+                if (attachment.Sha256 is { } sha256)
+                    knownHashes[name] = sha256;
+            }
+        }
+
+        IsLoading = true;
+        StatusText = $"Extrayendo «{entry.Name}» con verificación de hash…";
+
+        try
+        {
+            var result = await Task.Run(() => ControlledExtractionService.Extract(new ExtractionRequest
+            {
+                Package = BuildPackageIdentity(source, path),
+                Source = source,
+                Entries = new[] { entry },
+                DestinationDirectory = destinationDirectory,
+                KnownHashes = knownHashes,
+            }));
+
+            var record = result.Entries[0];
+            StatusText = record.Verified
+                ? $"✓ «{record.ExportedAs}» extraída y VERIFICADA por SHA-256 en «{destinationDirectory}». " +
+                  $"Constancia: {Path.GetFileName(result.ManifestPath)}. El paquete permanece intacto."
+                : $"✗ Extracción FALLIDA de «{entry.Name}»: {record.Error} " +
+                  $"Constancia del intento: {Path.GetFileName(result.ManifestPath)}.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"✗ No se pudo extraer: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Identificación del paquete con hash fresco del contenedor (solo lectura).
+    /// Corre en el thread pool; las carpetas no tienen hash único.
+    /// </summary>
+    private static PackageIdentity BuildPackageIdentity(IInspectionSource source, string path)
+    {
+        string? packageSha256 = null;
+        long? sizeBytes = null;
+        DateTime? lastModifiedUtc = null;
+        if (File.Exists(path))
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            packageSha256 = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+            var info = new FileInfo(path);
+            sizeBytes = info.Length;
+            lastModifiedUtc = info.LastWriteTimeUtc;
+        }
+
+        var kind = source switch
+        {
+            ZipInspectionSource => PackageKind.Zip,
+            FolderInspectionSource => PackageKind.Folder,
+            _ => PackageKind.File,
+        };
+
+        return new PackageIdentity(source.DisplayName, path, kind, packageSha256, sizeBytes, lastModifiedUtc);
     }
 
     private async Task ComputePackageHashAsync(string path)

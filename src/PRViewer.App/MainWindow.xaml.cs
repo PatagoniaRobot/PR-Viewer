@@ -22,6 +22,23 @@ public partial class MainWindow : Window
     private void OnTreeSelectionChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         => _viewModel.SelectedNode = e.NewValue as EntryNodeViewModel;
 
+    /// <summary>
+    /// Extracción controlada de la entrada seleccionada (Enmienda E1.3.b): la
+    /// elección explícita de la carpeta destino es la confirmación del perito.
+    /// </summary>
+    private async void OnExtractSelected(object sender, RoutedEventArgs e)
+    {
+        var entryName = _viewModel.ExtractableEntryName;
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = $"Carpeta destino para extraer «{entryName}» (con verificación de hash)",
+        };
+        if (dialog.ShowDialog() != true)
+            return;
+
+        await _viewModel.ExtractSelectedEntryAsync(dialog.FolderName);
+    }
+
     /// <summary>Abre el diálogo del informe y delega la generación en el view model.</summary>
     private async void OnGenerateReport(object sender, RoutedEventArgs e)
     {

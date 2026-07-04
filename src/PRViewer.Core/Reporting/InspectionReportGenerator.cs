@@ -15,7 +15,7 @@ namespace PRViewer.Core.Reporting;
 public static class InspectionReportGenerator
 {
     /// <summary>Versión declarada en el pie de los informes.</summary>
-    public const string GeneratorVersion = "PR-Viewer 1.1";
+    public const string GeneratorVersion = ToolInfo.NameAndVersion;
 
     public static InspectionReportResult Generate(InspectionReportRequest request)
     {
