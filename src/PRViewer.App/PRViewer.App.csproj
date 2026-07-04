@@ -23,4 +23,9 @@
     <ProjectReference Include="..\PRViewer.Core\PRViewer.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Concentus" Version="2.2.2" />
+    <PackageReference Include="Concentus.Oggfile" Version="1.0.7" />
+  </ItemGroup>
+
 </Project>

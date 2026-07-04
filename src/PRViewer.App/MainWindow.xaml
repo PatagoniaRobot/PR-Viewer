@@ -248,6 +248,56 @@
             </DockPanel>
         </DataTemplate>
 
+        <!-- ══ Preview: reproductor de audio Opus (motor PR-Opus) ══ -->
+        <DataTemplate DataType="{x:Type pv:AudioPreviewViewModel}">
+            <Border Background="{StaticResource PanelBrush}" CornerRadius="6"
+                    Padding="24" Margin="24" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    MaxWidth="640">
+                <StackPanel>
+                    <TextBlock Text="🎵" FontSize="48" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding EntryName}" Foreground="{StaticResource AccentCyanBrush}"
+                               FontWeight="SemiBold" FontSize="15" HorizontalAlignment="Center"
+                               Margin="0,10,0,0" TextWrapping="Wrap" />
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
+                        <Button Content="▶  Reproducir" Command="{Binding PlayCommand}" Margin="0,0,8,0" />
+                        <Button Content="⏸  Pausa" Command="{Binding PauseCommand}" Margin="0,0,8,0" />
+                        <Button Content="⏹  Detener" Command="{Binding StopCommand}" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                        <TextBlock Text="🔉" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <Slider Value="{Binding Volume}" Minimum="0" Maximum="100" Width="160"
+                                VerticalAlignment="Center"
+                                ToolTip="Volumen" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource AccentGreenBrush}"
+                               FontSize="12" HorizontalAlignment="Center" Margin="0,10,0,0" />
+
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition /><RowDefinition /><RowDefinition />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Tipo" Foreground="{StaticResource TextDimBrush}" Margin="0,2,16,2" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ContentType}" Style="{StaticResource MonoText}" Foreground="{StaticResource TextBrush}" Margin="0,2" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Tamaño" Foreground="{StaticResource TextDimBrush}" Margin="0,2,16,2" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SizeText}" Style="{StaticResource MonoText}" Foreground="{StaticResource TextBrush}" Margin="0,2" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="SHA-256" Foreground="{StaticResource TextDimBrush}" Margin="0,2,16,2" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Sha256}" Style="{StaticResource MonoText}"
+                                   Foreground="{StaticResource AccentGreenBrush}" TextWrapping="Wrap" Margin="0,2" />
+                    </Grid>
+                    <TextBlock Text="Reproducción desde memoria con el motor PR-Opus; el archivo original nunca se extrae ni se modifica."
+                               Foreground="{StaticResource TextDimBrush}" FontSize="11"
+                               TextWrapping="Wrap" TextAlignment="Center" Margin="0,14,0,0" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
         <!-- ══ Preview: ficha de metadatos (video, audio, documentos) ══ -->
         <DataTemplate DataType="{x:Type pv:FileInfoPreviewViewModel}">
             <Border Background="{StaticResource PanelBrush}" CornerRadius="6"

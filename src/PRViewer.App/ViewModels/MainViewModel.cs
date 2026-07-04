@@ -51,7 +51,20 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public string PackageSha256 { get => _packageSha256; private set => SetProperty(ref _packageSha256, value); }
     public bool IsLoading { get => _isLoading; private set => SetProperty(ref _isLoading, value); }
 
-    public object? SelectedPreview { get => _selectedPreview; private set => SetProperty(ref _selectedPreview, value); }
+    public object? SelectedPreview
+    {
+        get => _selectedPreview;
+        private set
+        {
+            if (ReferenceEquals(_selectedPreview, value))
+                return;
+
+            // El preview saliente puede tener recursos vivos (p. ej. audio sonando).
+            (_selectedPreview as IDisposable)?.Dispose();
+            _selectedPreview = value;
+            RaisePropertyChanged();
+        }
+    }
 
     public bool HasConversation => _conversation is not null;
     public bool HasSource => _source is not null;
@@ -284,6 +297,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             FileKind.Text => new TextPreviewViewModel(_source, entry),
             FileKind.Image => new ImagePreviewViewModel(_source, entry, MediaVisibility, knownSha256),
             FileKind.Pdf => new PdfPreviewViewModel(_source, entry, MediaVisibility, knownSha256),
+            FileKind.Audio => new AudioPreviewViewModel(_source, entry, knownSha256),
             FileKind.Docx => new DocxPreviewViewModel(_source, entry, knownSha256),
             _ => new FileInfoPreviewViewModel(_source, entry, knownSha256),
         };
@@ -308,6 +322,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        SelectedPreview = null; // libera recursos del preview (p. ej. audio)
         _source?.Dispose();
         _source = null;
     }
