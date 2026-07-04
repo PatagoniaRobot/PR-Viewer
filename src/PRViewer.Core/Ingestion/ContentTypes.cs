@@ -5,7 +5,7 @@ namespace PRViewer.Core.Ingestion;
 /// informativos para el visor. La detección de plataforma nunca usa extensiones;
 /// esto es únicamente etiquetado para mostrar.
 /// </summary>
-internal static class ContentTypes
+public static class ContentTypes
 {
     private static readonly Dictionary<string, string> Map = new(StringComparer.OrdinalIgnoreCase)
     {

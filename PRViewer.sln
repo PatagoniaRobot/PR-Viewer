@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{846BAC12
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PRViewer.Core.Tests", "tests\PRViewer.Core.Tests\PRViewer.Core.Tests.csproj", "{80AFA680-C32B-445C-BFBE-E2A1DC157985}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PRViewer.App", "src\PRViewer.App\PRViewer.App.csproj", "{A547CEA7-56BC-4374-8303-5CFCDEB0A289}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,9 +30,14 @@ Global
 		{80AFA680-C32B-445C-BFBE-E2A1DC157985}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{80AFA680-C32B-445C-BFBE-E2A1DC157985}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{80AFA680-C32B-445C-BFBE-E2A1DC157985}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A547CEA7-56BC-4374-8303-5CFCDEB0A289}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A547CEA7-56BC-4374-8303-5CFCDEB0A289}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A547CEA7-56BC-4374-8303-5CFCDEB0A289}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A547CEA7-56BC-4374-8303-5CFCDEB0A289}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{A14A4DDE-F6E6-4DCE-AB66-00D42722BFA6} = {841A1C32-1246-4AAD-BA30-01724D7ADF76}
 		{80AFA680-C32B-445C-BFBE-E2A1DC157985} = {846BAC12-C925-4B2C-B040-E7BAB22BCD38}
+		{A547CEA7-56BC-4374-8303-5CFCDEB0A289} = {841A1C32-1246-4AAD-BA30-01724D7ADF76}
 	EndGlobalSection
 EndGlobal

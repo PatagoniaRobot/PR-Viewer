@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- TFM con SDK de Windows 10 para Windows.Data.Pdf (renderizador de PDF
+         del propio sistema operativo; no es una dependencia de terceros). -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>PRViewer.App</RootNamespace>
+    <AssemblyName>PRViewer.App</AssemblyName>
+    <Version>0.1.0</Version>
+    <Authors>Claudio (Patagonia Robot)</Authors>
+    <Company>Patagonia Robot</Company>
+    <Description>PR-Viewer — Visor forense de solo lectura (Capa 2, UI WPF). Nunca escribe, modifica ni reescribe el material que inspecciona.</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/PatagoniaRobot/PR-Viewer</RepositoryUrl>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PRViewer.Core\PRViewer.Core.csproj" />
+  </ItemGroup>
+
+</Project>
