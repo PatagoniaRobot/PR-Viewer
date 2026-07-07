@@ -66,7 +66,8 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
                 </TabItem>
-                <TabItem Header="Texto crudo">
+                <TabItem Header="Texto crudo"
+                         Visibility="{Binding HasRawText, Converter={StaticResource BoolToVis}}">
                     <TextBox Text="{Binding RawText, Mode=OneWay}" IsReadOnly="True"
                              Background="Transparent" BorderThickness="0"
                              Foreground="{StaticResource TextBrush}"
@@ -416,6 +417,10 @@
                     <TextBlock Text="{Binding DateRangeText}" Foreground="{StaticResource TextBrush}" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                    <TextBlock Text="Conversaciones: " Foreground="{StaticResource TextDimBrush}" />
+                    <TextBlock Text="{Binding ThreadCountText}" Foreground="{StaticResource TextBrush}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
                     <TextBlock Text="Mensajes: " Foreground="{StaticResource TextDimBrush}" />
                     <TextBlock Text="{Binding MessageCountText}" Foreground="{StaticResource TextBrush}" />
                 </StackPanel>
@@ -462,6 +467,39 @@
                             </HierarchicalDataTemplate>
                         </TreeView.ItemTemplate>
                     </TreeView>
+                </TabItem>
+                <TabItem Header="Conversaciones"
+                         Visibility="{Binding HasThreads, Converter={StaticResource BoolToVis}}">
+                    <ListBox ItemsSource="{Binding Threads}"
+                             SelectedItem="{Binding SelectedThread}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="2,3">
+                                    <TextBlock Text="{Binding Title}" Foreground="{StaticResource TextBrush}"
+                                               FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding ParticipantsText}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                        <TextBlock Text="{Binding MessageCountText}" Style="{StaticResource MonoText}"
+                                                   FontSize="11" Foreground="{StaticResource TextDimBrush}" />
+                                        <TextBlock Text="{Binding AttachmentText}"
+                                                   FontSize="11" Margin="10,0,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
+                                                    <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasMissingAttachments}" Value="True">
+                                                            <Setter Property="Foreground" Value="{StaticResource MissingBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </TabItem>
                 <TabItem Header="Multimedia">
                     <ListBox ItemsSource="{Binding Attachments}"

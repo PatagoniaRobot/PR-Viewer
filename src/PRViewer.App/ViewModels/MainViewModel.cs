@@ -21,9 +21,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private readonly ExportIngestorRegistry _registry = ExportIngestorRegistry.CreateDefault();
 
     private IInspectionSource? _source;
-    private IngestedConversation? _conversation;
+    private IngestedPackage? _conversation;
     private SourceEntry? _chatEntry;
     private ChatPreviewViewModel? _chatPreview;
+    private ThreadItemViewModel? _selectedThread;
     private Dictionary<string, AttachmentInfo>? _attachmentsByName;
 
     private SourceEntry? _extractableEntry;
@@ -48,6 +49,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     public IReadOnlyList<EntryNodeViewModel> RootNodes { get; private set; } = Array.Empty<EntryNodeViewModel>();
     public IReadOnlyList<AttachmentItemViewModel> Attachments { get; private set; } = Array.Empty<AttachmentItemViewModel>();
+    public IReadOnlyList<ThreadItemViewModel> Threads { get; private set; } = Array.Empty<ThreadItemViewModel>();
+
+    /// <summary>Hay más de un hilo: se muestra la pestaña de conversaciones.</summary>
+    public bool HasThreads => Threads.Count > 0;
 
     public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
     public string? SourcePath { get => _sourcePath; private set => SetProperty(ref _sourcePath, value); }
@@ -84,6 +89,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         ? $"{c.DateRange.First:dd/MM/yyyy} → {c.DateRange.Last:dd/MM/yyyy}"
         : "—";
     public string MessageCountText => _conversation?.MessageCount.ToString() ?? "—";
+    public string ThreadCountText => _conversation?.ThreadCount.ToString() ?? "—";
     public string AttachmentSummaryText
     {
         get
@@ -126,6 +132,21 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 SelectedPreview = value.Entry is { } entry
                     ? CreatePreview(entry)
                     : new MissingAttachmentPreviewViewModel(value.Attachment);
+            }
+        }
+    }
+
+    /// <summary>Hilo seleccionado en la pestaña «Conversaciones»; muestra sus mensajes parseados.</summary>
+    public ThreadItemViewModel? SelectedThread
+    {
+        get => _selectedThread;
+        set
+        {
+            if (SetProperty(ref _selectedThread, value) && value is not null)
+            {
+                // Un hilo no es una entrada del paquete: no hay extracción directa desde acá.
+                SetExtractableEntry(null);
+                SelectedPreview = new ChatPreviewViewModel(value.Thread.Messages);
             }
         }
     }
@@ -192,7 +213,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             var (source, conversation) = await Task.Run(() =>
             {
                 var opened = InspectionSource.Open(path);
-                IngestedConversation? ingested = null;
+                IngestedPackage? ingested = null;
                 var ingestor = _registry.Detect(opened);
                 if (ingestor is not null)
                     ingested = ingestor.Ingest(opened);
@@ -232,6 +253,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         SelectedPreview = null;
         _selectedNode = null;
         _selectedAttachment = null;
+        _selectedThread = null;
         _extractableEntry = null;
         _chatPreview = null;
         _chatEntry = null;
@@ -242,6 +264,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         _source = null;
         RootNodes = Array.Empty<EntryNodeViewModel>();
         Attachments = Array.Empty<AttachmentItemViewModel>();
+        Threads = Array.Empty<ThreadItemViewModel>();
         RaiseAllStateChanged();
     }
 
@@ -254,6 +277,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         if (_conversation is { } conversation)
         {
+            Threads = conversation.Threads.Select(t => new ThreadItemViewModel(t)).ToList();
+
             _attachmentsByName = new Dictionary<string, AttachmentInfo>(StringComparer.OrdinalIgnoreCase);
             foreach (var attachment in conversation.Attachments)
                 _attachmentsByName.TryAdd(attachment.Name, attachment);
@@ -284,6 +309,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         RaisePropertyChanged(nameof(RootNodes));
         RaisePropertyChanged(nameof(Attachments));
+        RaisePropertyChanged(nameof(Threads));
+        RaisePropertyChanged(nameof(HasThreads));
+        RaisePropertyChanged(nameof(ThreadCountText));
         RaisePropertyChanged(nameof(HasConversation));
         RaisePropertyChanged(nameof(HasSource));
         RaisePropertyChanged(nameof(CanGenerateReport));
@@ -308,7 +336,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         if (_conversation is { } conversation && _chatEntry is { } chatEntry
             && entry.Path.Equals(chatEntry.Path, StringComparison.OrdinalIgnoreCase))
         {
-            return _chatPreview ??= new ChatPreviewViewModel(_source, chatEntry, conversation.Messages);
+            return _chatPreview ??= new ChatPreviewViewModel(conversation.Messages, _source, chatEntry);
         }
 
         var knownSha256 = _attachmentsByName is { } map && map.TryGetValue(entry.Name, out var attachment)

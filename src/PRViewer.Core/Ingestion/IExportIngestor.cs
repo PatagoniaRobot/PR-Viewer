@@ -20,8 +20,8 @@ public interface IExportIngestor
     bool CanIngest(IInspectionSource source);
 
     /// <summary>
-    /// Normaliza el contenido de la fuente a la abstracción común.
-    /// Solo lectura: no modifica ni extrae el material.
+    /// Normaliza el contenido de la fuente a la abstracción común (paquete con
+    /// uno o más hilos). Solo lectura: no modifica ni extrae el material.
     /// </summary>
-    IngestedConversation Ingest(IInspectionSource source);
+    IngestedPackage Ingest(IInspectionSource source);
 }

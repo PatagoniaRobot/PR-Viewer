@@ -166,9 +166,10 @@ internal static class HtmlReportWriter
     {
         var c = data.Conversation;
 
-        w.WriteLine($"<h1>{number}. Resumen de la Conversación</h1>");
+        w.WriteLine($"<h1>{number}. Resumen del Paquete</h1>");
 
         w.WriteLine("<div class='stats-grid'>");
+        Stat(w, "Hilos de conversación", c.ThreadCount.ToString("N0"), "");
         Stat(w, "Mensajes", c.MessageCount.ToString("N0"), "");
         Stat(w, "De sistema", data.SystemMessageCount.ToString("N0"), "");
         Stat(w, "Participantes", c.Participants.Count.ToString("N0"), "");
@@ -186,6 +187,35 @@ internal static class HtmlReportWriter
         Row(w, "Participantes", string.Join("; ", c.Participants));
         w.WriteLine("</div>");
         w.WriteLine("</div>");
+
+        // Desglose por hilo: pertinente cuando el paquete trae varios (X, Meta, TikTok).
+        if (data.Threads.Count > 1)
+        {
+            w.WriteLine("<div class='table-wrap'>");
+            w.WriteLine("<table>");
+            w.WriteLine("<thead><tr><th>#</th><th>Conversación</th><th>Mensajes</th><th>Participantes</th><th>Rango temporal</th><th>Adjuntos</th></tr></thead>");
+            w.WriteLine("<tbody>");
+            var index = 1;
+            foreach (var t in data.Threads)
+            {
+                var range = t.DateRange.HasValue
+                    ? $"{ReportData.FormatDate(t.DateRange.First)} → {ReportData.FormatDate(t.DateRange.Last)}"
+                    : "sin fechas";
+                var attach = t.MissingAttachments > 0
+                    ? $"{t.PresentAttachments} pres., <span class='badge badge-missing'>{t.MissingAttachments} AUSENTES</span>"
+                    : $"{t.PresentAttachments} pres.";
+                w.WriteLine("<tr>");
+                w.WriteLine($"<td>{index++}</td>");
+                w.WriteLine($"<td>{Esc(t.Title)}</td>");
+                w.WriteLine($"<td>{t.MessageCount:N0}</td>");
+                w.WriteLine($"<td>{Esc(string.Join("; ", t.Participants))}</td>");
+                w.WriteLine($"<td>{range}</td>");
+                w.WriteLine($"<td>{attach}</td>");
+                w.WriteLine("</tr>");
+            }
+            w.WriteLine("</tbody></table>");
+            w.WriteLine("</div>");
+        }
     }
 
     private static void WriteAttachmentsSection(StreamWriter w, int number, ReportData data)

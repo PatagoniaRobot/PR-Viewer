@@ -103,25 +103,42 @@ internal sealed class ReportData
     /// <summary>Entradas del paquete no referenciadas como adjuntos (incluye el propio chat), con su SHA-256.</summary>
     public required IReadOnlyList<(SourceEntry Entry, string Sha256)> UnreferencedEntries { get; init; }
 
-    public IngestedConversation Conversation => Request.Conversation;
+    /// <summary>Desglose por hilo de conversación (uno solo en WhatsApp; varios en X/Meta/TikTok).</summary>
+    public required IReadOnlyList<ThreadSummary> Threads { get; init; }
+
+    public IngestedPackage Conversation => Request.Conversation;
     public PackageIdentity Package => Request.Package;
 
     public static ReportData Compute(InspectionReportRequest request)
     {
         var conversation = request.Conversation;
 
-        // Retrocesos temporales: pares consecutivos con ambos timestamps donde el orden se invierte.
+        // Retrocesos temporales: pares consecutivos con ambos timestamps donde el orden
+        // se invierte. Se cuentan por hilo — cruzar hilos daría retrocesos espurios.
         var backtracks = 0;
-        DateTime? previous = null;
-        foreach (var message in conversation.Messages)
+        foreach (var thread in conversation.Threads)
         {
-            if (message.Timestamp is { } current)
+            DateTime? previous = null;
+            foreach (var message in thread.Messages)
             {
-                if (previous is { } prev && current < prev)
-                    backtracks++;
-                previous = current;
+                if (message.Timestamp is { } current)
+                {
+                    if (previous is { } prev && current < prev)
+                        backtracks++;
+                    previous = current;
+                }
             }
         }
+
+        var threadSummaries = conversation.Threads
+            .Select(t => new ThreadSummary(
+                t.Title,
+                t.MessageCount,
+                t.Participants,
+                t.DateRange,
+                t.Attachments.Count(a => a.IsPresent),
+                t.Attachments.Count(a => !a.IsPresent)))
+            .ToList();
 
         // Entradas no referenciadas por la conversación (mismo criterio de cruce
         // por nombre que usa la ingesta). Se hashean acá, en streaming y solo lectura.
@@ -149,6 +166,7 @@ internal sealed class ReportData
             PresentAttachments = conversation.Attachments.Where(a => a.IsPresent).ToList(),
             MissingAttachments = conversation.Attachments.Where(a => !a.IsPresent).ToList(),
             UnreferencedEntries = unreferenced,
+            Threads = threadSummaries,
         };
     }
 
@@ -173,3 +191,12 @@ internal sealed class ReportData
         _ => "Archivo suelto",
     };
 }
+
+/// <summary>Resumen por hilo para la sección de conversaciones del informe.</summary>
+internal sealed record ThreadSummary(
+    string Title,
+    int MessageCount,
+    IReadOnlyList<string> Participants,
+    DateRange DateRange,
+    int PresentAttachments,
+    int MissingAttachments);

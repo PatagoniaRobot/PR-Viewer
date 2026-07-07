@@ -44,7 +44,7 @@ public sealed partial class WhatsAppTxtIngestor : IExportIngestor
     public bool CanIngest(IInspectionSource source)
         => FindChatEntry(source) is not null;
 
-    public IngestedConversation Ingest(IInspectionSource source)
+    public IngestedPackage Ingest(IInspectionSource source)
     {
         var chatEntry = FindChatEntry(source)
             ?? throw new InvalidDataException($"«{source.DisplayName}» no contiene un chat de WhatsApp reconocible.");
@@ -66,14 +66,25 @@ public sealed partial class WhatsAppTxtIngestor : IExportIngestor
 
         var attachments = ResolveAttachments(source, messages);
 
-        return new IngestedConversation
+        // WhatsApp exporta un único hilo por paquete: título por participantes,
+        // con el nombre del archivo del chat como respaldo.
+        var title = participants.Count > 0
+            ? string.Join(", ", participants)
+            : chatEntry.Name;
+
+        var thread = new ConversationThread
         {
-            Platform = Platform.WhatsApp,
+            Title = title,
             Participants = participants,
             DateRange = dateRange,
-            MessageCount = messages.Count,
             Attachments = attachments,
             Messages = messages,
+        };
+
+        return new IngestedPackage
+        {
+            Platform = Platform.WhatsApp,
+            Threads = new[] { thread },
         };
     }
 

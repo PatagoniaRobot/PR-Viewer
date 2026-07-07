@@ -17,8 +17,8 @@ public sealed class InspectionReportRequest
     /// <summary>Identificación del paquete tal como fue recibido.</summary>
     public required PackageIdentity Package { get; init; }
 
-    /// <summary>Conversación normalizada por la ingesta.</summary>
-    public required IngestedConversation Conversation { get; init; }
+    /// <summary>Paquete normalizado por la ingesta (uno o más hilos de conversación).</summary>
+    public required IngestedPackage Conversation { get; init; }
 
     /// <summary>
     /// Fuente abierta del paquete, para inventariar y hashear las entradas

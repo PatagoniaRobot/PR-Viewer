@@ -12,11 +12,17 @@ public enum Platform
     /// <summary>Export de WhatsApp («Exportar chat»: _chat.txt + media).</summary>
     WhatsApp,
 
-    /// <summary>Instagram vía «Descargar mi información» de Meta (JSON).</summary>
+    /// <summary>Instagram vía «Descargar tu información» de Meta (HTML o JSON, elegible al descargar).</summary>
     MetaInstagram,
 
-    /// <summary>Facebook vía «Descargar mi información» de Meta (JSON).</summary>
+    /// <summary>Facebook/Messenger vía «Descargar tu información» de Meta (HTML o JSON, elegible al descargar).</summary>
     MetaFacebook,
+
+    /// <summary>Export de X/Twitter («Descargar un archivo de tus datos»: data/direct-messages.js).</summary>
+    TwitterX,
+
+    /// <summary>Export de TikTok («Descargar tus datos»: TXT o JSON, elegible al descargar).</summary>
+    TikTok,
 
     /// <summary>Export de Telegram Desktop (JSON o HTML).</summary>
     Telegram,

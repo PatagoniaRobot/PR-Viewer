@@ -29,7 +29,7 @@ public sealed class ExportIngestorRegistry
     /// Detecta la plataforma e ingesta en un solo paso.
     /// </summary>
     /// <exception cref="UnknownPlatformException">Si ningún ingestor reconoce la fuente.</exception>
-    public IngestedConversation Ingest(IInspectionSource source)
+    public IngestedPackage Ingest(IInspectionSource source)
     {
         var ingestor = Detect(source) ?? throw new UnknownPlatformException(source.DisplayName);
         return ingestor.Ingest(source);

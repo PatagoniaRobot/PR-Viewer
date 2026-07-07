@@ -57,9 +57,10 @@ internal static class TxtReportWriter
             ?? "(carpeta: sin hash único; ver inventario por entrada)");
         w.WriteLine();
 
-        // ── Resumen de la conversación ──
-        w.WriteLine("### RESUMEN DE LA CONVERSACIÓN ###");
+        // ── Resumen del paquete ──
+        w.WriteLine("### RESUMEN DEL PAQUETE ###");
         w.WriteLine();
+        Field(w, "  Hilos de conversación", data.Conversation.ThreadCount.ToString("N0"));
         Field(w, "  Mensajes totales", data.Conversation.MessageCount.ToString("N0"));
         Field(w, "  Mensajes de sistema", data.SystemMessageCount.ToString("N0"));
         Field(w, "  Participantes", data.Conversation.Participants.Count.ToString("N0"));
@@ -71,6 +72,26 @@ internal static class TxtReportWriter
         Field(w, "  Adjuntos presentes", data.PresentAttachments.Count.ToString("N0"));
         Field(w, "  Adjuntos AUSENTES", data.MissingAttachments.Count.ToString("N0"));
         w.WriteLine();
+
+        // ── Desglose por hilo (varios en X/Meta/TikTok; uno en WhatsApp) ──
+        if (data.Threads.Count > 1)
+        {
+            w.WriteLine($"### CONVERSACIONES DEL PAQUETE ({data.Threads.Count:N0}) ###");
+            w.WriteLine();
+            var index = 1;
+            foreach (var t in data.Threads)
+            {
+                w.WriteLine($"  Conversación #{index++}: {t.Title}");
+                Field(w, "    Mensajes", t.MessageCount.ToString("N0"));
+                Field(w, "    Participantes", string.Join("; ", t.Participants));
+                Field(w, "    Rango temporal", t.DateRange.HasValue
+                    ? $"{ReportData.FormatDate(t.DateRange.First)} -> {ReportData.FormatDate(t.DateRange.Last)}"
+                    : "sin fechas parseables");
+                Field(w, "    Adjuntos presentes", t.PresentAttachments.ToString("N0"));
+                Field(w, "    Adjuntos AUSENTES", t.MissingAttachments.ToString("N0"));
+                w.WriteLine();
+            }
+        }
 
         // ── Inventario de adjuntos ──
         w.WriteLine($"### INVENTARIO DE ADJUNTOS ({data.Conversation.Attachments.Count:N0}) ###");
