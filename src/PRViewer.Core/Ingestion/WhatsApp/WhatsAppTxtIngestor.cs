@@ -107,7 +107,12 @@ public sealed partial class WhatsAppTxtIngestor : IExportIngestor
         return null;
     }
 
-    /// <summary>Lee las primeras líneas y verifica que al menos una tenga formato de mensaje.</summary>
+    /// <summary>
+    /// Lee las primeras líneas y verifica que al menos una tenga formato de mensaje
+    /// con un timestamp realmente parseable. Exigir el timestamp válido evita falsos
+    /// positivos con otros exports cuyas líneas casualmente empiezan con «[...]» o
+    /// «fecha - » (p. ej. historiales de TikTok), que el patrón laxo aceptaría.
+    /// </summary>
     private static bool LooksLikeWhatsAppChat(IInspectionSource source, SourceEntry entry)
     {
         using var stream = source.OpenRead(entry);
@@ -120,7 +125,11 @@ public sealed partial class WhatsAppTxtIngestor : IExportIngestor
                 break;
 
             line = StripDirectionalMarks(line);
-            if (IosLinePattern().IsMatch(line) || AndroidLinePattern().IsMatch(line))
+            var match = IosLinePattern().Match(line);
+            if (!match.Success)
+                match = AndroidLinePattern().Match(line);
+
+            if (match.Success && ParseTimestamp(match.Groups["ts"].Value) is not null)
                 return true;
         }
 
