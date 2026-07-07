@@ -1,4 +1,5 @@
 using PRViewer.Core.Model;
+using PRViewer.Core.Ingestion.Twitter;
 using PRViewer.Core.Ingestion.WhatsApp;
 using PRViewer.Core.Sources;
 
@@ -37,13 +38,14 @@ public sealed class ExportIngestorRegistry
 
     /// <summary>
     /// Registro con los ingestores incluidos en la librería.
-    /// Hoy: WhatsApp (≈90% del volumen). Meta/Telegram/Snapchat se agregarán
-    /// cuando se confirmen los formatos con muestras reales.
+    /// Hoy: WhatsApp (≈90% del volumen) y X/Twitter. Meta y TikTok se agregarán
+    /// a medida que se confirmen los formatos con muestras reales.
     /// </summary>
     public static ExportIngestorRegistry CreateDefault()
     {
         var registry = new ExportIngestorRegistry();
         registry.Register(new WhatsAppTxtIngestor());
+        registry.Register(new TwitterDmIngestor());
         return registry;
     }
 }
