@@ -6,12 +6,12 @@ Componente abierto de la familia **Patagonia Robot** · Licencia Apache 2.0
 
 ## Qué es
 
-PR-Viewer es un visor forense de propósito general. Su primer caso de uso es la inspección de paquetes de exportación de plataformas de mensajería y redes sociales (WhatsApp, Meta, Telegram, Snapchat) antes de su ingesta forense: validar visualmente, sin alterar un byte, que el paquete recibido sirve (que no esté vacío, roto o incompleto) antes de hashear, empaquetar y labrar acta.
+PR-Viewer es un visor forense de propósito general. Su primer caso de uso es la inspección de paquetes de exportación de plataformas de mensajería y redes sociales (WhatsApp, X/Twitter, TikTok, Instagram, Facebook, Telegram) antes de su ingesta forense: validar visualmente, sin alterar un byte, que el paquete recibido sirve (que no esté vacío, roto o incompleto) antes de hashear, empaquetar y labrar acta. Un mismo paquete puede contener **muchas conversaciones** (un hilo por corresponsal o grupo); PR-Viewer las separa y presenta una por una.
 
 ## Arquitectura
 
-- **Capa 1 — `PRViewer.Core`**: núcleo de inspección reutilizable, sin UI y sin dependencias externas. Abre el contenedor (ZIP, carpeta o archivo suelto) en solo lectura, lista las entradas, detecta la plataforma de origen **por contenido** (nunca por extensión) y normaliza a una abstracción común agnóstica de plataforma (`IngestedConversation`). Incluye además el generador de informes de inspección y la extracción controlada (ver «Operaciones de salida»).
-- **Capa 2 — `PRViewer.App`**: visor WPF que consume la Capa 1. Árbol de entradas, galería multimedia, preview por tipo: chat parseado (con pestaña de texto crudo), JSON navegable, imágenes decodificadas en memoria, PDF renderizado en memoria con la API del propio Windows, texto de `.docx` vía BCL, y reproducción de notas de voz Ogg/Opus con motor propio sobre `waveOut` — **todo procesado íntegramente en memoria, jamás por archivo temporal**. Soporta apertura por línea de comandos: `PRViewer.App.exe "ruta\al\paquete.zip"`.
+- **Capa 1 — `PRViewer.Core`**: núcleo de inspección reutilizable, sin UI y sin dependencias externas. Abre el contenedor (ZIP, carpeta o archivo suelto) en solo lectura, lista las entradas, detecta la plataforma de origen **por contenido** (nunca por extensión) y normaliza a una abstracción común agnóstica de plataforma: un `IngestedPackage` con uno o más `ConversationThread` (cada hilo con sus participantes, rango temporal, mensajes y adjuntos), más agregados de paquete. Incluye además el generador de informes de inspección y la extracción controlada (ver «Operaciones de salida»).
+- **Capa 2 — `PRViewer.App`**: visor WPF que consume la Capa 1. Árbol de entradas, **pestaña «Conversaciones» con selector de hilo** (para los paquetes multi-conversación), galería multimedia, preview por tipo: chat parseado (con pestaña de texto crudo cuando el hilo proviene de un archivo único), JSON navegable, imágenes decodificadas en memoria, PDF renderizado en memoria con la API del propio Windows, texto de `.docx` vía BCL, y reproducción de notas de voz Ogg/Opus con motor propio sobre `waveOut` — **todo procesado íntegramente en memoria, jamás por archivo temporal**. Soporta apertura por línea de comandos: `PRViewer.App.exe "ruta\al\paquete.zip"`.
 
 ### Privacidad en el visor
 
@@ -19,14 +19,18 @@ Pensado para material sensible: todo contenido visual (imágenes, miniaturas, PD
 
 ### Patrón de ingesta
 
-Registry + un `IExportIngestor` por plataforma. Nuevas plataformas se enchufan sin tocar el núcleo.
+Registry + un `IExportIngestor` por plataforma. La detección es siempre por contenido; el más laxo (WhatsApp) se evalúa último para no capturar paquetes ajenos. Nuevas plataformas se enchufan sin tocar el núcleo. Cada ingestor devuelve un `IngestedPackage` (uno o más hilos).
 
 | Ingestor | Entrada | Estado |
 |---|---|---|
-| `WhatsAppTxtIngestor` | `_chat.txt` + media (ZIP de la app) | ✅ Implementado (validado con exports reales Android) |
-| `MetaJsonIngestor` | «Descargar tu información» (IG / Facebook / Threads) | Pendiente (esperando muestras reales) |
-| `TelegramJsonIngestor` | Export de Telegram Desktop | Pendiente (esperando muestras reales) |
-| `SnapchatIngestor` | Export de Snapchat | Pendiente (esperando muestras reales) |
+| `WhatsAppTxtIngestor` | «Exportar chat»: `_chat.txt` + media | ✅ Implementado (validado con exports reales Android **e iOS**) |
+| `TwitterDmIngestor` | X/Twitter «Descargar tus datos»: `direct-messages.js` | ✅ Implementado (validado con export real) |
+| `TikTokTxtIngestor` | TikTok «Descargar tus datos» (TXT) | ✅ Implementado (validado con export real) |
+| `MetaInstagramHtmlIngestor` · `MetaFacebookHtmlIngestor` | Meta «Descargar tu información» (HTML): Instagram y Facebook/Messenger | ✅ Implementado (validado con exports reales) |
+| `TelegramHtmlIngestor` | Telegram Desktop (HTML) | ✅ Implementado (validado con export real) |
+| Meta (JSON) · Telegram (JSON) · Snapchat · Discord | variantes JSON y otras plataformas | Pendiente (esperando muestras reales) |
+
+Las plataformas que solo referencian su multimedia por URL (p. ej. los videos compartidos de TikTok) se registran como **adjuntos «referenciados, no presentes»**: quedan visibles en el visor y el informe como señal de que ese contenido no viaja dentro del paquete.
 
 ## Uso de la Capa 1
 
@@ -39,17 +43,23 @@ using var source = InspectionSource.Open(@"C:\ruta\al\export.zip");
 
 // Detecta la plataforma por contenido y normaliza.
 var registry = ExportIngestorRegistry.CreateDefault();
-var conversation = registry.Ingest(source);
+var package = registry.Ingest(source);
 
-Console.WriteLine($"Plataforma:    {conversation.Platform}");
-Console.WriteLine($"Participantes: {string.Join(", ", conversation.Participants)}");
-Console.WriteLine($"Mensajes:      {conversation.MessageCount}");
-Console.WriteLine($"Rango:         {conversation.DateRange.First} — {conversation.DateRange.Last}");
+Console.WriteLine($"Plataforma:     {package.Platform}");
+Console.WriteLine($"Conversaciones: {package.ThreadCount}");
+Console.WriteLine($"Mensajes:       {package.MessageCount}");
+Console.WriteLine($"Rango:          {package.DateRange.First} — {package.DateRange.Last}");
 
-foreach (var attachment in conversation.Attachments)
+// Un paquete puede traer muchos hilos (uno por corresponsal o grupo).
+foreach (var thread in package.Threads)
 {
-    // IsPresent == false ⇒ adjunto referenciado en el chat pero ausente del paquete
-    // (señal de export incompleto, visible antes de labrar acta).
+    Console.WriteLine($"— {thread.Title}: {thread.MessageCount} mensajes, {thread.Participants.Count} participantes");
+}
+
+foreach (var attachment in package.Attachments)
+{
+    // IsPresent == false ⇒ adjunto referenciado pero ausente del paquete, o referencia
+    // externa por URL (señal de export incompleto / contenido no incluido, antes de labrar acta).
     Console.WriteLine($"{attachment.Name}  {attachment.Size}  {attachment.Sha256}  presente={attachment.IsPresent}");
 }
 ```
