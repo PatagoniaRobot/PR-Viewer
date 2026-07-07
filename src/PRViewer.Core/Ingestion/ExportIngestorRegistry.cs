@@ -1,4 +1,5 @@
 using PRViewer.Core.Model;
+using PRViewer.Core.Ingestion.Meta;
 using PRViewer.Core.Ingestion.TikTok;
 using PRViewer.Core.Ingestion.Twitter;
 using PRViewer.Core.Ingestion.WhatsApp;
@@ -38,9 +39,8 @@ public sealed class ExportIngestorRegistry
     }
 
     /// <summary>
-    /// Registro con los ingestores incluidos en la librería.
-    /// Hoy: X/Twitter, TikTok y WhatsApp (≈90% del volumen). Meta se agregará
-    /// a medida que se confirme el formato con muestras reales.
+    /// Registro con los ingestores incluidos en la librería:
+    /// X/Twitter, TikTok, Meta (Instagram y Facebook en HTML) y WhatsApp (≈90% del volumen).
     ///
     /// Orden = prioridad de detección: los ingestores con marcadores específicos van
     /// primero; WhatsApp (detector por formato de línea, el más laxo) queda de último
@@ -51,6 +51,8 @@ public sealed class ExportIngestorRegistry
         var registry = new ExportIngestorRegistry();
         registry.Register(new TwitterDmIngestor());
         registry.Register(new TikTokTxtIngestor());
+        registry.Register(new MetaInstagramHtmlIngestor());
+        registry.Register(new MetaFacebookHtmlIngestor());
         registry.Register(new WhatsAppTxtIngestor());
         return registry;
     }
